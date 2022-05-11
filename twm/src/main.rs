@@ -296,7 +296,7 @@ impl AppState {
 	}
 
 	// Returns a list of plugin directories
-	// Check that each directory actually contains something (ideally an actual plugin)
+	// TODO: Check that each directory actually contains something (ideally an actual plugin)
 	pub fn get_plugins(&self) -> SystemResult<Vec<String>> {
 		let mut list: Vec<String> = Vec::new();
 
@@ -872,7 +872,7 @@ impl AppState {
 			.workspaces
 			.iter()
 			.find(|s| s.id == id)
-[<64;37;51M			.map(|s| s.text.clone())
+			.map(|s| s.text.clone())
 			.filter(|t| !t.is_empty())
 			.unwrap_or(format!(" {} ", id.to_string()))
 	}
