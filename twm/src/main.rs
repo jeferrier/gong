@@ -64,7 +64,7 @@ mod macros {
     ///     // only runs on windows
     /// }
     /// ```
-    /// TODO: correctly implement this (but how?)
+    //TODO: correctly implement this (but how?)
     macro_rules! windows {
         ($( $stmt:stmt )*) => {
             #[cfg(target_os = "windows")]
@@ -180,7 +180,7 @@ impl AppState {
         self.displays = display::init(&self.config);
     }
 
-    // TODO: maybe rename this function
+    //TODO: maybe rename this function
     pub fn cleanup(&mut self) -> SystemResult {
         for d in self.displays.iter_mut() {
             d.cleanup(self.config.remove_task_bar)?;
@@ -193,7 +193,7 @@ impl AppState {
 
 	// Uses the repository in `name` and attempts to clone it into `self.config.plugins_path`
 	// Will abort if the plugin directory is already installed
-	//TODO: Use repo slugs instead of cloning each git repository
+	// TODO: Use repo slugs instead of cloning each git repository
     pub fn install_plugin(&mut self, name: String) -> SystemResult {
         let url = format!("https://www.github.com/{}", &name);
         let mut path = self.config.plugins_path.clone();
