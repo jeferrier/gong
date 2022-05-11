@@ -38,6 +38,7 @@ pub const NOG_POPUP_NAME: &'static str = "nog_popup";
 #[macro_use]
 #[allow(unused_macros)]
 mod macros {
+
     /// logs the amount of time it took to execute the passed expression
     macro_rules! time {
         ($name: expr, $expr: expr) => {{
@@ -47,12 +48,14 @@ mod macros {
             temp
         }};
     }
+
     /// sleeps for the given milliseconds
     macro_rules! sleep {
         ($ms: expr) => {
             std::thread::sleep(std::time::Duration::from_millis($ms))
         };
     }
+
     /// only runs the code if this is compiled on windows
     ///
     /// usage
@@ -61,7 +64,7 @@ mod macros {
     ///     // only runs on windows
     /// }
     /// ```
-    /// TODO: correctly implement this
+    /// TODO: correctly implement this (but how?)
     macro_rules! windows {
         ($( $stmt:stmt )*) => {
             #[cfg(target_os = "windows")]
@@ -72,6 +75,7 @@ mod macros {
             };
         }
     }
+
     /// This macro either gets the Ok(..) value of the first expression or returns the second
     /// expression.
     macro_rules! fail_silent_with {
@@ -82,6 +86,7 @@ mod macros {
             };
         };
     }
+
     /// This macro either gets the Ok(..) value of the first expression or returns the second
     /// expression.
     /// This also prints the error using log::error
@@ -96,6 +101,7 @@ mod macros {
             };
         };
     }
+
     /// This macro either gets the Ok(..) value of the passed expression or returns an Ok(()).
     /// This also prints the error using log::error
     macro_rules! fail {
@@ -168,12 +174,13 @@ impl Default for AppState {
 }
 
 impl AppState {
+
     pub fn init(&mut self, state_arc: Arc<Mutex<AppState>>) {
         self.work_mode = self.config.work_mode;
         self.displays = display::init(&self.config);
     }
 
-    /// TODO: maybe rename this function
+    // TODO: maybe rename this function
     pub fn cleanup(&mut self) -> SystemResult {
         for d in self.displays.iter_mut() {
             d.cleanup(self.config.remove_task_bar)?;
@@ -184,14 +191,19 @@ impl AppState {
         Ok(())
     }
 
+	// Uses the repository in `name` and attempts to clone it into `self.config.plugins_path`
+	// Will abort if the plugin directory is already installed
+	//TODO: Use repo slugs instead of cloning each git repository
     pub fn install_plugin(&mut self, name: String) -> SystemResult {
         let url = format!("https://www.github.com/{}", &name);
         let mut path = self.config.plugins_path.clone();
         path.push(name.split("/").join("_"));
 
         if path.exists() {
+	        // TODO: Better check that the plugin is installed???
             debug!("{} is already installed", name);
         } else {
+	        // TODO: Report error/failure from this process and reset the directory to before it was modified
             debug!("Installing {} from {}", name, url);
             Command::new("git")
                 .arg("clone")
@@ -208,6 +220,8 @@ impl AppState {
         Ok(())
     }
 
+	// Crawls the list of directories in `self.config.plugins_path` and treats each as a git repository
+	// Attempts to update each one using git operations
     pub fn update_plugins(&mut self) -> SystemResult {
         if let Ok(dirs) = get_plugins_path_iter() {
             for dir in dirs {
@@ -242,11 +256,13 @@ impl AppState {
                         .output()
                         .unwrap();
 
+					// TODO: Make sure this is a sane way to check for updates to git repos
                     let has_updates =
                         output.stdout.iter().map(|&x| x as char).collect::<String>() != "0\n";
 
                     if has_updates {
                         debug!("Updating {}", name);
+				        // TODO: Report error/failure from this process and reset the directory to before it was modified
                         Command::new("git")
                             .arg("pull")
                             .arg(&url)
@@ -263,6 +279,7 @@ impl AppState {
         Ok(())
     }
 
+	// Removes completely the directory associated with a plugin in `self.config.plugins_path`
     pub fn uninstall_plugin(&mut self, name: String) -> SystemResult {
         let mut path = self.config.plugins_path.clone();
         path.push(name.split("/").join("_"));
@@ -278,6 +295,8 @@ impl AppState {
         Ok(())
     }
 
+	// Returns a list of plugin directories
+	// Check that each directory actually contains something (ideally an actual plugin)
     pub fn get_plugins(&self) -> SystemResult<Vec<String>> {
         let mut list: Vec<String> = Vec::new();
 
@@ -292,10 +311,12 @@ impl AppState {
         Ok(list)
     }
 
+	// TODO: What is this even doing? Looks like nothing
     pub fn create_popup(&mut self) -> SystemResult {
         Ok(())
     }
 
+	// Returns a string of the currently focused window's title
     pub fn get_window_title(&mut self) -> SystemResult<String> {
         Ok(self
             .get_current_grid()
@@ -304,11 +325,13 @@ impl AppState {
             .unwrap_or_default())
     }
 
-    //TODO: Make this work at runtime after initilization
+    //TODO: Make this work at runtime after initilization (why wouldn't it work???)
     pub fn add_keybinding(&mut self, kb: Keybinding) {
         self.config.add_keybinding(kb.clone());
     }
 
+	// TODO: Is there a more generic way to emit messages like this?
+	// Actually emit a change workspace event for the event subsystem
     pub fn emit_change_workspace(&mut self, id: i32) -> SystemResult {
         self.event_channel
             .sender
@@ -317,6 +340,8 @@ impl AppState {
         Ok(())
     }
 
+	// TODO: Is there a more generic way to emit messages like this?
+	// Actually emit a lua runtime error event for the event subsystem
     pub fn emit_lua_rt_error(&mut self, msg: &str) {
         self.event_channel
             .sender
@@ -847,7 +872,7 @@ impl AppState {
             .workspaces
             .iter()
             .find(|s| s.id == id)
-            .map(|s| s.text.clone())
+[<64;37;51M            .map(|s| s.text.clone())
             .filter(|t| !t.is_empty())
             .unwrap_or(format!(" {} ", id.to_string()))
     }
@@ -875,7 +900,7 @@ impl AppState {
         if self.pinned.is_pinned(window_id) {
             if let Some(window) = self.pinned.get_mut(window_id) {
                 return Some(window);
-            } 
+            }
         } else if let Some(grid) = self.find_grid_containing_window_mut(WindowId::from(*window_id)) {
             return grid.get_window_mut(WindowId::from(*window_id));
         }
