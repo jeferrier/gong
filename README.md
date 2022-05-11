@@ -1,5 +1,7 @@
 # Nog
 
+This is a straight clone of TimUntersberger/nog
+
 ![preview](https://user-images.githubusercontent.com/32014449/107612664-0490ac00-6c47-11eb-9620-e754aa38b5b0.png)
 
 ## Documentation
@@ -27,7 +29,7 @@ The problem is that the focus returns to the previous window after PowerLauncher
 3. PowerLauncher closes -> focus returns to previous application
 4. notepad launches
 
-If the previous application mentioned in step 3 is managed by nog, the workspace will change to its grid. The only way to fix this (at least that I know of) is if we implement our own application launcher that is connected with nog. 
+If the previous application mentioned in step 3 is managed by nog, the workspace will change to its grid. The only way to fix this (at least that I know of) is if we implement our own application launcher that is connected with nog.
 
 ## Contributions
 
