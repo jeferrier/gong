@@ -2,19 +2,13 @@
 
 This is a straight clone of TimUntersberger/nog
 
-![preview](https://user-images.githubusercontent.com/32014449/107612664-0490ac00-6c47-11eb-9620-e754aa38b5b0.png)
+TODO: Picture here
 
 ## Documentation
 
-https://timuntersberger.github.io/nog
+TODO: Documentation link here
 
-## Download
-
-### Windows
-
-```powershell
-(iwr "https://raw.githubusercontent.com/TimUntersberger/nog/master/bin/download_release.ps1").Content > download.ps1; ./download.ps1 master-release; rm download.ps1
-```
+## TODO: Install directions
 
 ## Known Problems
 
@@ -66,4 +60,4 @@ mdbook build ./book
 ```
 
 ### Updating .ns Config Files
-We recently changed the config scripting language to use Lua. If you need help converting your config to the new format, consult the config guide [here]( https://github.com/TimUntersberger/nog/blob/master/config.md) or feel free to post on the [documentation feedback issue](https://github.com/TimUntersberger/nog/issues/106).
+We recently changed the config scripting language to use Lua. If you need help converting your config to the new format, consult the config guide TODO: link here or feel free to post on the documentation feedback issue TODO: link this.
