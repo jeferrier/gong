@@ -430,16 +430,19 @@ impl AppState {
 		Ok(())
 	}
 
+	// Minimizes the currently focused window in the current grid
 	pub fn minimize_window(&mut self) -> SystemResult {
 		let config = self.config.clone();
-		let grid = self.get_current_grid_mut().unwrap();
+		let current_grid = self.get_current_grid_mut().unwrap();
 
-		grid.modify_focused_window(|window| {
+		// TODO: Think I'd rather just get the window and then modify it instead of this callback approach
+		// OR have the grid manage this task?
+		current_grid.modify_focused_window(|window| {
 			window.minimize()?;
 			window.cleanup()
 		})?;
 
-		grid.close_focused();
+		current_grid.close_focused();
 
 		let display = self.get_current_display_mut();
 		display.refresh_grid(&config)?;
@@ -447,20 +450,23 @@ impl AppState {
 		Ok(())
 	}
 
+	// Closes the currently focused window in the grid
 	pub fn close_window(&mut self) -> SystemResult {
 		if popup::is_visible() {
 			return popup::close();
 		}
 
 		let config = self.config.clone();
-		let grid = self.get_current_grid_mut().unwrap();
+		let current_grid = self.get_current_grid_mut().unwrap();
 
-		grid.modify_focused_window(|window| {
+		// TODO: Think I'd rather just get the window and then modify it instead of this callback approach
+		// OR have the grid manage this task?
+		current_grid.modify_focused_window(|window| {
 			window.cleanup()?;
 			window.close()
 		})?;
 
-		grid.close_focused();
+		current_grid.close_focused();
 
 		let display = self.get_current_display_mut();
 		display.refresh_grid(&config)?;
@@ -468,6 +474,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Redraws all workspaces
 	pub fn redraw(&mut self) -> SystemResult {
 		let fg_win = NativeWindow::get_foreground_window()?;
 		fg_win.to_foreground(true)?;
@@ -479,11 +486,14 @@ impl AppState {
 			}
 		}
 
+		// TODO: What does this actually do???
 		fg_win.remove_topmost()?;
 
 		Ok(())
 	}
 
+	// Adds the process to the list of Rules which are used to ignore windows
+	// TODO: Where???
 	pub fn ignore_window(&mut self) -> SystemResult {
 		if let Some(window) = self.get_current_grid().unwrap().get_focused_window() {
 			let mut rule = Rule::default();
@@ -504,12 +514,14 @@ impl AppState {
 		Ok(())
 	}
 
+	// Moves a window to a target workspace (assuming that workspace exists)
 	pub fn move_window_to_workspace(&mut self, id: i32) -> SystemResult {
-		let grid = self.get_current_grid_mut().unwrap();
-		let window = grid.pop();
+		let current_grid = self.get_current_grid_mut().unwrap();
+		let current_window = current_grid.pop();
 
-		window.map(|window| {
+		current_window.map(|window| {
 			if let Some(target_grid) = self.get_grid_by_id_mut(id) {
+				// TODO: Make it possible to choose whether or not the destination grid gets foregrounded in the configurations
 				window.hide();
 				target_grid.push(window);
 				Store::save(id, target_grid.to_string());
@@ -523,6 +535,9 @@ impl AppState {
 		Ok(())
 	}
 
+	// Toggles fullscreen for the current window
+	// TODO: Is this destructive to the grid?
+	// TODO: Grid history and undo
 	pub fn toggle_fullscreen(&mut self) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -532,6 +547,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Toggle view pinned?
 	pub fn toggle_view_pinned(&mut self, ws_id: Option<i32>) -> SystemResult {
 		let config = self.config.clone();
 		let current_id = self.workspace_id.clone();
