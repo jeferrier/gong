@@ -350,47 +350,75 @@ impl AppState {
 			)));
 	}
 
+	// Moves a workspace to a monitor based on the id of the monitor
+	// TODO: Where do the monitor IDs come from and what do they represent?
 	pub fn move_workspace_to_monitor(&mut self, monitor: i32) -> SystemResult {
+
+		// Check if the requested monitor even exists
 		if self.get_display_by_idx_mut(monitor).is_none() {
 			error!("Monitor with id {} doesn't exist", monitor);
 			return Ok(());
 		}
-		let display = self.get_current_display_mut();
 
-		if let Some(grid) = display
+		// Get the current display
+		let current_display = self.get_current_display_mut();
+
+		// TODO: Don't put all this into the if condition, if it fails during the block after, the grid might just disappear into the aether
+		// If the current_display has a grid (i.e. workspace), remove that grid and then do the block
+		if let Some(grid) = current_display
 			.focused_grid_id
-			.and_then(|id| display.remove_grid_by_id(id))
+			.and_then(|id| current_display.remove_grid_by_id(id))
 		{
 			let config = self.config.clone();
 			let new_display = self.get_display_by_idx_mut(monitor).unwrap();
 			let id = grid.id;
 
+			// Add the grid (i.e. workspace) to the new display and focus the workspace again on the new monitor
 			new_display.grids.push(grid);
 			new_display.grids.sort_by_key(|g| g.id);
 			new_display.focus_workspace(&config, id)?;
+			// Update our workspace id
+			// TODO: should probably be done in focus_workspace
 			self.workspace_id = id;
 			self.refresh_pinned()?;
 		}
 
-
 		Ok(())
 	}
 
+	// Move a workspace INTO another workspace
+	// TODO: Does this completely erase the old workspace???
+	// NOTE: in this function grid and workspace are basically interchangeable
 	pub fn move_workspace_to_workspace(&mut self, workspace_id: i32) -> SystemResult {
+
 		let is_empty = self
 			.get_grid_by_id(workspace_id)
 			.map_or(false, |g| g.is_empty());
 		let current_id = self.workspace_id.clone();
 		let current_grid_exists = self.get_current_grid().is_some();
+
+		// If the workspace we want to move is not empty (same as not exists, practically???)
+		// AND the current grid exists (exists or is focused???)
+		// AND the current workspace is different from the workspace we want to move
 		if is_empty && current_grid_exists && current_id != workspace_id {
+
+			// Make an empty grid
 			let mut empty_grid = TileGrid::new(current_id, renderer::NativeRenderer);
 			let source = self.get_current_grid_mut().unwrap();
 			source.id = workspace_id;
+
+			// Put all the items from the current grid into the empty grid
 			mem::swap(source, &mut empty_grid);
+
+			// Get the destination workspace
 			let target = self.get_grid_by_id_mut(workspace_id).unwrap();
 			target.id = current_id;
+
+			// Put all the items from the empty grid into the current workspace
+			// TODO: Does this just completely chuck all the things in the current workspace? `swap` here is confusing terminology
 			mem::swap(target, &mut empty_grid);
 
+			// Focus the workspace that we wanted to move originally
 			let config = self.config.clone();
 			if let Some(display) = self.find_grid_display_mut(workspace_id) {
 				display.focus_workspace(&config, workspace_id)?;
