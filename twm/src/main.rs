@@ -536,7 +536,7 @@ impl AppState {
 	}
 
 	// Toggles fullscreen for the current window
-	// TODO: Is this destructive to the grid?
+	// TODO: Does fullscreening something affect the other elements in the grid?
 	// TODO: Grid history and undo
 	pub fn toggle_fullscreen(&mut self) -> SystemResult {
 		let config = self.config.clone();
@@ -547,7 +547,6 @@ impl AppState {
 		Ok(())
 	}
 
-	// Toggle view pinned?
 	pub fn toggle_view_pinned(&mut self, ws_id: Option<i32>) -> SystemResult {
 		let config = self.config.clone();
 		let current_id = self.workspace_id.clone();
@@ -556,6 +555,7 @@ impl AppState {
 			display.focus_workspace(&config, current_id)?;
 		}
 
+		// TODO: All the work happens here???
 		self.pinned.toggle_view_pinned(ws_id)?;
 
 		Ok(())
@@ -569,8 +569,17 @@ impl AppState {
 		bar::close_all(state_arc.clone());
 	}
 
+	// Loops over stored settings and grid information (local to this running instance) and constructs:
+	// 	active grids
+	// 	app bars
+	// 	ignored windows
+	// 	pinned windows
+	// 	Then focuses the window
+	// TODO: What's an Arc and what's the state_arc meant to do
 	pub fn enter_work_mode(state_arc: Arc<Mutex<AppState>>) -> SystemResult {
+		// And why do we lock it before we start changing things???
 		let mut this = state_arc.lock();
+
 		if this.config.remove_task_bar {
 			info!("Hiding taskbar");
 			this.hide_taskbars();
@@ -586,15 +595,19 @@ impl AppState {
 		let remove_title_bar = this.config.remove_title_bar;
 		let use_border = this.config.use_border;
 		let stored_data = Store::load();
-
 		let rules = this.config.rules.clone();
 		let additional_rules = this.additonal_rules.clone();
+
+		// For each stored display, and each workspace associated with each
 		for display in this.displays.iter_mut() {
 			for grid in display.grids.iter_mut() {
+				// Find any grids contained within
 				if let Some(stored_grid) = stored_data.grids.get((grid.id - 1) as usize) {
+					// restore the grid from the saved grid store (a string)
 					grid.from_string(stored_grid);
 					Store::save(grid.id, grid.to_string());
 
+					// apply ignore rules to the relevant windows
 					if let Err(e) = grid.modify_windows(|window| {
 						let rules = rules.iter().chain(additional_rules.iter()).collect();
 						window.set_matching_rule(rules);
@@ -609,11 +622,13 @@ impl AppState {
 				grid.hide(); // hides all the windows just loaded into the grid
 			}
 
+			// Tally up previously stored information about the focused window
 			if let Some(id) = display.focused_grid_id {
 				focused_workspaces.push(id);
 			}
 		}
 
+		// If there are windows marked as focused
 		if !focused_workspaces.is_empty() {
 			// re-focus to show each display's focused workspace
 			for id in focused_workspaces.iter().rev() {
@@ -624,8 +639,10 @@ impl AppState {
 			this.change_workspace(1, false)?;
 		}
 
+		// Pin the stored pinned windows too
 		this.pinned = Pinned::load(stored_data.pinned_windows, &this)?;
 
+		// Start the events system back up
 		info!("Registering windows event handler");
 		this.window_event_listener.start(&this.event_channel);
 
@@ -638,6 +655,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Do the opposite of enter_work_mode, though this all seems to be handled by cleanup function
 	pub fn leave_work_mode(state_arc: Arc<Mutex<AppState>>) -> SystemResult {
 		let mut this = state_arc.lock();
 		let tx = this.event_channel.sender.clone();
@@ -677,6 +695,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Swap the focused window with a window in the direction specified -- all inside one workspace
 	pub fn swap(&mut self, direction: Direction) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -691,6 +710,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn swap_columns_and_rows(&mut self) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -705,6 +725,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn move_in(&mut self, direction: Direction) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -719,6 +740,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn move_out(&mut self, direction: Direction) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -733,6 +755,8 @@ impl AppState {
 		Ok(())
 	}
 
+	// Move the focus to the next window in the workspace according to direction
+	// TODO: Does this have wraparound as well?
 	pub fn focus(&mut self, direction: Direction) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -747,6 +771,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn resize(&mut self, direction: Direction, amount: i32) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -762,6 +787,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Sets the split direction to be used when the next window is added to the workspace
 	pub fn set_split_direction(&mut self, direction: SplitDirection) -> SystemResult {
 		let display = self.get_current_display_mut();
 		if let Some(grid) = display.get_focused_grid_mut() {
@@ -770,6 +796,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// Helper function to do callback on all windows
 	pub fn each_window(&mut self, cb: impl Fn(&mut NativeWindow) -> SystemResult + Copy) -> SystemResult {
 		for d in &mut self.displays {
 			for g in &mut d.grids {
@@ -780,6 +807,10 @@ impl AppState {
 		Ok(())
 	}
 
+	// Removes the focused window from the focused grid
+	// If the focused window is not in the current workspace, nothing happens
+	// TODO: Consider changing this ^ to something more intuitive
+	// TODO: Shouldn't this toggle? Where's the toggle???
 	pub fn toggle_floating(&mut self) -> SystemResult {
 		let config = self.config.clone();
 
@@ -791,6 +822,7 @@ impl AppState {
 
 		if let Some(grid) = grid {
 			// don't do anything if focused window isn't on current grid
+			// TODO: This check should happen elsewhere
 			if grid.id == current_workspace_id {
 				if let Some(mut w) = grid.remove_by_window_id(window.id) {
 					debug!("Unmanaging window '{}' | {}", w.title, w.id);
@@ -846,6 +878,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn reset_column(&mut self) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -858,6 +891,7 @@ impl AppState {
 		Ok(())
 	}
 
+	// TODO: Figure out what this really does
 	pub fn reset_row(&mut self) -> SystemResult {
 		let config = self.config.clone();
 		let display = self.get_current_display_mut();
@@ -881,6 +915,7 @@ impl AppState {
 			.is_some()
 	}
 
+	// Finds the workspace at the id, and focuses it
 	pub fn change_workspace(&mut self, id: i32, _force: bool) -> SystemResult {
 		let config = self.config.clone();
 		let current = self.get_current_display().id;
@@ -934,6 +969,7 @@ impl AppState {
 			.map(|w| w.id.0)
 	}
 
+	// NOTE: Not scoped to the workspace
 	pub fn get_focused_win(&self) -> i32 {
 		NativeWindow::get_foreground_window()
 			.expect("Failed to get foreground window")
