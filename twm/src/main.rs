@@ -976,7 +976,11 @@ impl AppState {
 			.id.into()
 	}
 
+	// Returns a mutable reference to a window
 	pub fn get_window_mut(&mut self, window_id: &i32) -> Option<&mut NativeWindow> {
+		// TODO: Seems to imply that a pinned window is not managed by the workspace it is in
+		// 	I think I would do this a bit differently such as attaching a pin to a workspace and
+		// 	allowing multiple pins
 		if self.pinned.is_pinned(window_id) {
 			if let Some(window) = self.pinned.get_mut(window_id) {
 				return Some(window);
